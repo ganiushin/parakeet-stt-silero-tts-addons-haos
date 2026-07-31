@@ -1,5 +1,5 @@
 name: Wyoming Silero TTS
-version: "1.0.0"
+version: "1.1.0"
 slug: wyoming_silero_tts
 description: Silero v5 Russian text-to-speech on CPU (Wyoming protocol)
 url: https://github.com/ganiushin/parakeet-stt-silero-tts-addons-haos

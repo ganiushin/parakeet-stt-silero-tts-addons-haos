@@ -12,7 +12,7 @@ import logging
 import re
 from typing import List, Optional
 
-import numpy as np
+import torch
 from wyoming.audio import AudioChunk, AudioStart, AudioStop
 from wyoming.event import Event
 from wyoming.info import Describe, Info
@@ -125,7 +125,11 @@ class SileroEventHandler(AsyncEventHandler):
                 _LOGGER.exception("Synthesis failed for %r", text)
                 return
 
-        pcm = (np.clip(audio.numpy(), -1.0, 1.0) * 32767).astype(np.int16).tobytes()
+        # clamp() already copies, so scale in place on that copy rather than
+        # allocating a second one — ~11 MB per minute of 48 kHz speech. The
+        # tensor Silero returns is a view into its own output and is left
+        # untouched.
+        pcm = torch.clamp(audio, -1.0, 1.0).mul_(32767).to(torch.int16).numpy().tobytes()
         if not self._audio_started:
             await self.write_event(
                 AudioStart(rate=self.sample_rate, width=2, channels=1).event()
