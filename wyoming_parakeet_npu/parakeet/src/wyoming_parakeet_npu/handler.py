@@ -88,12 +88,6 @@ class ParakeetEventHandler(AsyncEventHandler):
         self._channels = 1
         self._overflow_logged = False
 
-    def _reset(self) -> None:
-        self._audio = bytearray()
-        self._rate = None
-        self._overflow_logged = False
-        self.request_language = None
-
     def _decode_audio(self) -> np.ndarray:
         if self._width == 2:
             waveform = np.frombuffer(bytes(self._audio), dtype=np.int16)
@@ -164,7 +158,8 @@ class ParakeetEventHandler(AsyncEventHandler):
             else:
                 _LOGGER.warning("AudioStop without audio; returning empty transcript")
             await self.write_event(Transcript(text=text).event())
-            self._reset()
+            # False ends wyoming's read loop and disconnects, so this handler
+            # instance is done — one connection carries one utterance.
             return False
 
         if Transcribe.is_type(event.type):

@@ -1,5 +1,42 @@
 # Changelog
 
+## 1.6.0
+
+- **Disk usage drops from ~4.5 GB to ~1.3 GB** for a default install, and
+  upgrading reclaims the difference on the first start. The add-on now keeps
+  only what it runs on: the INT8 encoder and decoder/joint (670 MB) are never
+  downloaded at all, the FP32 decoder/joint (72 MB) is deleted once the static
+  IR is built from it, and the 2.5 GB FP32 encoder graph is fetched only for
+  bucket sizes that have no precompiled blob. Change `encoder_buckets` away
+  from the default and the next start downloads it; change it back and the
+  next start removes it again.
+- **The onnx-asr pipeline is now assembled explicitly** around the NPU shims
+  (`pipeline.py`) instead of being loaded for CPU and patched afterwards. No
+  ONNX Runtime session is created any more — previously nine were: the INT8
+  encoder (stubbed), the INT8 decoder/joint, and seven resamplers, each with
+  its own thread pool sized to the whole CPU. The 16 kHz → 16 kHz resampler
+  path is a no-op and is only built if a client ever sends another rate.
+- **Correct encoder bucket dispatch.** The mel preprocessor pads the waveform
+  by half a window on each side, so it emits exactly one frame more than the
+  audio contains. Sizing the bucket by that width missed the matching bucket
+  by one frame every time: audio of exactly 10.00 s fell through to the next
+  bucket (or, with a single bucket configured, logged a spurious "truncating"
+  warning on every full window). Dispatch now uses the true speech length.
+- **A corrupt encoder blob no longer needs a 2.5 GB re-download**: it is
+  removed on import failure so the next start re-fetches just the blob.
+- Defaults for `encoder_buckets` / `language` now agree across `config.yaml`,
+  `run.sh`, the Dockerfile and the server (10 s, `ru`).
+- **The `GPU` device option is gone.** It could never work: the OpenVINO GPU
+  plugin needs the host's `/dev/dri` mapped into the add-on, which this add-on
+  does not do, so selecting it always failed the device check at startup.
+  `NPU` and `CPU` remain.
+- Dead code removed: two unused `_out_names` attributes in the shims, and the
+  handler's `_reset()` (wyoming disconnects after `AudioStop`, so the handler
+  instance never survives to be reused). The model directory name is now a
+  single shared constant instead of a literal in two files, and the redundant
+  `[hub]` extra was dropped from the `onnx-asr` pin — `huggingface_hub` is
+  already a direct dependency, and onnx-asr's downloader is no longer used.
+
 ## 1.5.0
 
 - **New option `force_language` (default on)**: locks decoding to the alphabet

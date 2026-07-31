@@ -1,9 +1,10 @@
 """Wyoming server for Parakeet TDT 0.6B v3 multilingual on Intel NPU.
 
-Loads the model via onnx_asr, then replaces its encoder + decoder/joint
-ORT InferenceSessions with OpenVINO NPU-compiled shims. The encoder uses
-multi-bucket dispatch (one compiled blob per audio length, picked at request
-time) with optional lazy loading for large buckets.
+Builds OpenVINO NPU-compiled shims for the encoder and decoder/joint, then
+assembles the onnx-asr pipeline around them (see pipeline.py — no ORT session
+for either graph is ever opened). The encoder uses multi-bucket dispatch, one
+compiled blob per audio length picked at request time, with optional lazy
+loading for large buckets.
 
 Designed for one specific use case: smart-home / dictation STT on Intel
 Core Ultra CPUs with the AI Boost NPU. No model selection, no quantization
@@ -18,87 +19,21 @@ import os
 import sys
 from functools import partial
 
-import onnx_asr
-import onnxruntime
 import openvino as ov
 from wyoming.info import AsrModel, AsrProgram, Attribution, Info
 from wyoming.server import AsyncServer
 
-from . import __version__
+from . import MODEL_NAME, __version__, buckets, pipeline
 from .handler import ParakeetEventHandler
-from .shims import OpenVinoDecoderShim, OpenVinoEncoderShim, _Spec
+from .shims import OpenVinoDecoderShim, OpenVinoEncoderShim
 
 _LOGGER = logging.getLogger(__name__)
 
-MODEL_NAME = "nemo-parakeet-tdt-0.6b-v3"
 SUPPORTED_LANGUAGES = (
     "en", "es", "fr", "de", "it", "pt", "nl", "pl", "ru", "uk",
     "bg", "hr", "cs", "da", "et", "fi", "el", "hu", "lv", "lt",
     "mt", "ro", "sk", "sl", "sv",
 )
-
-
-def _parse_buckets(s: str | None) -> list[float]:
-    return [float(x) for x in s.split(",") if x.strip()] if s else []
-
-
-class _StubEncoderSession:
-    """Stands in for the INT8 encoder ORT session during pipeline init.
-
-    onnx_asr loads a ~650 MB INT8 encoder session that we throw away the
-    moment the NPU shim is attached; stubbing it out saves that memory and
-    tens of seconds at startup. run() must never be reached.
-    """
-
-    def get_inputs(self):
-        return [_Spec("audio_signal", ["batch", 128, "time"]),
-                _Spec("length", ["batch"])]
-
-    def get_outputs(self):
-        return [_Spec("outputs", ["batch", 1024, "frames"]),
-                _Spec("encoded_lengths", ["batch"])]
-
-    def run(self, *args, **kwargs):
-        raise RuntimeError(
-            "stub encoder session invoked before the NPU shim was attached"
-        )
-
-
-def _load_pipeline(model_dir: str):
-    load = partial(
-        onnx_asr.load_model,
-        model=MODEL_NAME,
-        path=model_dir,
-        providers=["CPUExecutionProvider"],
-        sess_options=onnxruntime.SessionOptions(),
-        quantization="int8",
-    )
-
-    real_session = onnxruntime.InferenceSession
-
-    def factory(path, *args, **kwargs):
-        if str(path).endswith("encoder-model.int8.onnx"):
-            return _StubEncoderSession()
-        return real_session(path, *args, **kwargs)
-
-    onnxruntime.InferenceSession = factory
-    try:
-        model = load()
-        if not isinstance(model.asr._encoder, _StubEncoderSession):
-            _LOGGER.info(
-                "onnx_asr did not go through the patched session factory; "
-                "the INT8 encoder was loaded normally"
-            )
-        return model
-    except Exception:
-        _LOGGER.exception(
-            "Pipeline init with stubbed INT8 encoder failed; "
-            "falling back to the plain loader"
-        )
-    finally:
-        onnxruntime.InferenceSession = real_session
-
-    return load()
 
 
 def _build_wyoming_info(default_language: str) -> Info:
@@ -156,19 +91,21 @@ async def main() -> None:
     )
     parser.add_argument(
         "--encoder-buckets",
-        default=os.environ.get("ENCODER_BUCKETS", "5"),
-        help="Comma-separated EAGER bucket sizes in seconds (default: 5)",
+        default=os.environ.get("ENCODER_BUCKETS", buckets.DEFAULT_EAGER),
+        help=f"Comma-separated EAGER bucket sizes in seconds "
+             f"(default: {buckets.DEFAULT_EAGER})",
     )
     parser.add_argument(
         "--encoder-lazy-buckets",
-        default=os.environ.get("ENCODER_LAZY_BUCKETS", "20"),
-        help="Comma-separated LAZY bucket sizes in seconds (default: 20)",
+        default=os.environ.get("ENCODER_LAZY_BUCKETS", buckets.DEFAULT_LAZY),
+        help="Comma-separated LAZY bucket sizes in seconds (default: none)",
     )
     parser.add_argument(
         "--device",
         default=os.environ.get("DEVICE", "NPU"),
-        choices=["CPU", "GPU", "NPU"],
-        help="OpenVINO device for both encoder and decoder (default: NPU)",
+        choices=["CPU", "NPU"],
+        help="OpenVINO device for both encoder and decoder (default: NPU). "
+             "GPU is not offered: the add-on does not map /dev/dri.",
     )
     parser.add_argument("--debug", action="store_true",
                         help="Enable DEBUG-level logging")
@@ -196,28 +133,35 @@ async def main() -> None:
     decoder_ir = os.path.join(args.data_dir, "static_decoder", "decoder-static.xml")
     cache_dir = os.path.join(args.data_dir, "ov_cache")
 
-    for required, label in [(encoder_onnx, "FP32 encoder ONNX"),
-                            (decoder_ir, "static decoder IR")]:
-        if not os.path.exists(required):
+    eager = buckets.parse_seconds(args.encoder_buckets)
+    lazy = buckets.parse_seconds(args.encoder_lazy_buckets)
+    _LOGGER.info("Encoder buckets: eager=%s lazy=%s on %s", eager, lazy, args.device)
+
+    required = [(os.path.join(model_dir, "config.json"), "model config"),
+                (os.path.join(model_dir, "vocab.txt"), "vocabulary"),
+                (decoder_ir, "static decoder IR")]
+    # The 2.5 GB FP32 encoder graph is only kept on disk while some bucket
+    # still has to be compiled on device; buckets covered by a precompiled
+    # blob never touch it. Bootstrap decides this from the same helper.
+    to_compile = buckets.missing_blobs(
+        cache_dir, args.device, [buckets.frames(s) for s in eager + lazy]
+    )
+    if to_compile:
+        _LOGGER.info("Buckets without a precompiled blob: %s", to_compile)
+        required.append((encoder_onnx, "FP32 encoder ONNX"))
+
+    for path, label in required:
+        if not os.path.exists(path):
             _LOGGER.error(
                 "%s not found at %s. The entrypoint should fetch it on first run; "
                 "if you bypassed the entrypoint, run scripts/bootstrap.py manually.",
-                label, required,
+                label, path,
             )
             sys.exit(1)
 
-    # 1. Load the onnx_asr pipeline. Its INT8 encoder session is stubbed out
-    #    (we replace it with the NPU shim right below anyway).
-    _LOGGER.info("Loading onnx_asr pipeline (model=%s) ...", MODEL_NAME)
-    model = _load_pipeline(model_dir)
-
-    # 2. Replace the encoder + decoder with OpenVINO shims.
-    #    IMPORTANT: assign on `model.asr.*`, not on `model.*` — the adapter
-    #    wrapper does not proxy attribute writes.
-    eager = _parse_buckets(args.encoder_buckets)
-    lazy = _parse_buckets(args.encoder_lazy_buckets)
-    _LOGGER.info("Encoder buckets: eager=%s lazy=%s on %s", eager, lazy, args.device)
-    model.asr._encoder = OpenVinoEncoderShim(
+    # 1. Compile / import the NPU shims first, so the pipeline can be built
+    #    around them without onnx-asr ever opening an ORT session.
+    encoder = OpenVinoEncoderShim(
         onnx_path=encoder_onnx,
         device=args.device,
         cache_dir=cache_dir,
@@ -225,12 +169,16 @@ async def main() -> None:
         lazy_seconds=lazy,
     )
     force_language = args.force_language == "true"
-    model.asr._decoder_joint = OpenVinoDecoderShim(
+    decoder_joint = OpenVinoDecoderShim(
         ir_path=decoder_ir,
         device=args.device,
         cache_dir=cache_dir,
         vocab_path=os.path.join(model_dir, "vocab.txt") if force_language else None,
     )
+
+    # 2. Assemble the onnx-asr pipeline (vocab + NumPy mel preprocessor) on top.
+    model = pipeline.build(model_dir, encoder, decoder_joint)
+
     if force_language:
         _LOGGER.info(
             "Language forcing ON: decoder locked to the script of the "

@@ -6,7 +6,7 @@ Runs [wyoming-parakeet-on-intel-npu](https://github.com/cibernox/wyoming-parakee
 
 - Intel Core Ultra CPU with an AI Boost NPU (Arrow Lake verified; Meteor Lake and Lunar Lake should work).
 - `/dev/accel/accel0` must exist on the Home Assistant OS host (`intel_vpu` kernel driver). Check from the SSH add-on with protection mode off: `ls /dev/accel/`.
-- ~6 GB free disk space in the add-on data volume (model files + NPU blob).
+- ~1.5 GB free disk space in the add-on data volume with the default 10 s bucket (NPU blob, decoder IR, vocabulary). Bucket sizes that have no precompiled blob additionally need ~2.5 GB for the FP32 encoder graph they are compiled from.
 - ~2 GB of free RAM for the add-on. On Proxmox with NPU passthrough give the HAOS VM at least 5 GB — passthrough pins the guest RAM, and a 4 GB VM running a typical add-on set OOM-kills the model load (exit code 137).
 
 ## Running HAOS in a Proxmox VM
@@ -25,7 +25,9 @@ Two things are required for the NPU to work inside a VM:
 
 ## First start
 
-On first start the add-on downloads ~3.2 GB of model files plus a ~1.2 GB precompiled NPU blob (SHA-256 verified) into its persistent data directory — watch the progress in the add-on log. No on-device model compilation happens for the default 10 s bucket. Later starts take seconds.
+On first start the add-on downloads a ~1.2 GB precompiled NPU blob (SHA-256 verified) plus ~72 MB of model files into its persistent data directory — watch the progress in the add-on log. No on-device model compilation happens for the default 10 s bucket. Later starts take seconds.
+
+The add-on only keeps what it actually runs on. The FP32 decoder/joint graph is deleted as soon as the static IR is built from it, and the 2.5 GB FP32 encoder graph is fetched only when a configured bucket has no precompiled blob — change `encoder_buckets` away from the default and the next start will download it, change it back and the next start will remove it again. Upgrading from 1.5.0 or earlier reclaims about 3.2 GB on the first start.
 
 Once the Wyoming server is listening, the add-on registers itself with Home Assistant and the **Wyoming Protocol** integration is offered under **Settings → Devices & Services** (accept it, or add it manually with the host IP and port `10300`).
 
@@ -56,13 +58,13 @@ Latin spelling over forced transliteration.
 
 ### `device`
 
-OpenVINO device to run inference on: `NPU` (default), `GPU`, or `CPU`. `CPU` is a useful fallback to verify the pipeline works if the NPU is not detected. `GPU` requires the host to expose `/dev/dri` to the add-on, which this add-on does not map — use `NPU` or `CPU`.
+OpenVINO device to run inference on: `NPU` (default) or `CPU`. `CPU` is a useful fallback to verify the pipeline works if the NPU is not detected. GPU is not offered: it would need the host's `/dev/dri` mapped into the add-on, which this add-on does not do.
 
 ### `encoder_buckets` / `encoder_lazy_buckets`
 
 Comma-separated audio bucket sizes in seconds. Eager buckets are prepared at startup; lazy buckets on first use. Audio shorter than the bucket is padded (and still costs a full-bucket inference — ~200 ms on the NPU for 10 s); audio longer than the largest bucket is transcribed in bucket-sized windows split at quiet points and stitched together (up to 60 s total, each window costing one inference).
 
-The default **10 s** bucket uses a prebuilt, SHA-256-verified NPU blob (compiled offline for NPU 3720 — Meteor/Arrow Lake) downloaded on first start, so no on-device compilation is needed. Any other size falls back to a one-time on-device compile, which peaks at **~5 GB of RAM** (the resulting blob is then cached in `/data/ov_cache` and later starts are cheap again). Each configured eager bucket keeps its own ~1.2 GB compiled copy in memory — on small VMs stick to a single bucket.
+The default **10 s** bucket uses a prebuilt, SHA-256-verified NPU blob (compiled offline for NPU 3720 — Meteor/Arrow Lake) downloaded on first start, so no on-device compilation is needed. Any other size falls back to a one-time on-device compile: the add-on then downloads the **~2.5 GB FP32 encoder graph** it compiles from, and the compile itself peaks at **~5 GB of RAM**. The resulting blob is cached in `/data/ov_cache`, later starts are cheap again, and the FP32 graph is deleted once no configured bucket needs it. Each configured eager bucket keeps its own ~1.2 GB compiled copy in memory — on small VMs stick to a single bucket.
 
 ## Notes and limitations
 

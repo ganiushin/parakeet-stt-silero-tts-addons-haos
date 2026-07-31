@@ -16,10 +16,10 @@ ENV DEBIAN_FRONTEND=noninteractive \
     HF_HUB_CACHE=/data/huggingface \
     TZ=Etc/UTC \
     DATA_DIR=/data \
-    LANGUAGE=en \
+    LANGUAGE=ru \
     DEVICE=NPU \
-    ENCODER_BUCKETS=5 \
-    ENCODER_LAZY_BUCKETS=20
+    ENCODER_BUCKETS=10 \
+    ENCODER_LAZY_BUCKETS=""
 
 # System packages (jq is used by the add-on's run.sh to read options.json)
 RUN apt-get update && apt-get install -y --no-install-recommends \

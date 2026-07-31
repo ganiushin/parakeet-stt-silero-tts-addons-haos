@@ -49,7 +49,7 @@ the engine in **Settings → Voice assistants**.
 - **Host:** `/dev/accel/accel0` present (kernel ≥ 6.10 with `intel_vpu`)
 - **Proxmox VM:** pass the NPU through as a PCI device **and** add `intel_vpu.force_snoop=1` to `/mnt/boot/cmdline.txt` in HAOS ([details](./wyoming_parakeet_npu/DOCS.md#running-haos-in-a-proxmox-vm))
 - **Memory:** ~2 GB free for the add-on — on Proxmox give the HAOS VM **4 GB**
-- **Disk:** ~6 GB in the add-on data volume (model files + NPU blob)
+- **Disk:** ~1.5 GB in the add-on data volume (NPU blob + decoder IR + vocabulary)
 
 ### Everything this add-on downloads
 
@@ -62,7 +62,9 @@ prebuilt third-party images. These are the only external artifacts, all pinned:
 | Intel NPU driver + compiler v1.33.0 | [intel/linux-npu-driver](https://github.com/intel/linux-npu-driver/releases/tag/v1.33.0) | **SHA-256 pinned** in Dockerfile |
 | oneAPI Level Zero loader 1.28.6 | [oneapi-src/level-zero](https://github.com/oneapi-src/level-zero/releases/tag/v1.28.6) | **SHA-256 pinned** in Dockerfile |
 | Python packages (`openvino==2026.2.1`, `onnxruntime==1.26.0`, `wyoming==1.7.2`, …) | PyPI | versions pinned in [`pyproject.toml`](./wyoming_parakeet_npu/parakeet/pyproject.toml) |
-| Parakeet model files (~3.2 GB, ONNX) | [istupakov/parakeet-tdt-0.6b-v3-onnx](https://huggingface.co/istupakov/parakeet-tdt-0.6b-v3-onnx) on Hugging Face | downloaded at first start |
+| Parakeet vocabulary + config (~0.1 MB) | [istupakov/parakeet-tdt-0.6b-v3-onnx](https://huggingface.co/istupakov/parakeet-tdt-0.6b-v3-onnx) on Hugging Face | downloaded at first start, repo revision pinned |
+| Parakeet FP32 decoder/joint (~72 MB, ONNX) | same repo | fetched once to build the static IR, then deleted |
+| Parakeet FP32 encoder (~2.5 GB, ONNX) | same repo | **only** for bucket sizes with no precompiled blob |
 | Precompiled NPU blob (10 s bucket, ~1.2 GB) | [this repo's `blobs-1` release](https://github.com/ganiushin/parakeet-stt-silero-tts-addons-haos/releases/tag/blobs-1) | **SHA-256 pinned** in [`blobs.json`](./wyoming_parakeet_npu/blobs.json) |
 
 The application source lives in

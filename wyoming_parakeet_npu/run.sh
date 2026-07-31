@@ -10,8 +10,8 @@ opt() {
 export LANGUAGE="$(opt language ru)"
 export FORCE_LANGUAGE="$(opt force_language true)"
 export DEVICE="$(opt device NPU)"
-export ENCODER_BUCKETS="$(opt encoder_buckets 5)"
-export ENCODER_LAZY_BUCKETS="$(opt encoder_lazy_buckets 20)"
+export ENCODER_BUCKETS="$(opt encoder_buckets 10)"
+export ENCODER_LAZY_BUCKETS="$(opt encoder_lazy_buckets '')"
 export DATA_DIR=/data
 export WYOMING_URI=tcp://0.0.0.0:10300
 

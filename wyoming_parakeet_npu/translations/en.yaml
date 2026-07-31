@@ -15,7 +15,7 @@ configuration:
     name: Inference device
     description: >-
       OpenVINO device for the model. NPU is the point of this add-on; CPU is a
-      fallback for testing. GPU is not supported by this add-on (no /dev/dri mapping).
+      fallback for testing.
   encoder_buckets:
     name: Eager encoder buckets
     description: >-

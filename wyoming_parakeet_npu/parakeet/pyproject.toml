@@ -23,10 +23,12 @@ dependencies = [
     # Pinned exactly: precompiled NPU blobs are only importable by the same
     # OpenVINO version that exported them.
     "openvino==2026.2.1",
+    # Required by onnx-asr at import time; this add-on creates no ORT session.
     "onnxruntime==1.26.0",
-    # Pinned exactly: the add-on stubs onnx-asr's encoder session and monkey-
-    # patches its encoder/decoder slots, so internals must not drift.
-    "onnx-asr[hub]==0.11.0",
+    # Pinned exactly: the add-on assembles onnx-asr's TDT model itself (see
+    # pipeline.py) rather than going through load_model(), so internals must
+    # not drift. A mismatch fails loudly at import or construction.
+    "onnx-asr==0.11.0",
     "wyoming==1.7.2",
     "soundfile",
     "numpy",
