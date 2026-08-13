@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.3.0
+
+- **The five `v5_5_ru` voices are gone; the 29 `ru_` ones stay.** They were
+  offered in 1.2.0 so the two families could be compared in the UI; that
+  comparison is over. `v5_5_ru` is still downloaded and opened, but only to
+  lift its stress and homograph model out — its voices are dropped again
+  right away, and only `v5_cis_base` stays warm.
+- **Resident memory drops by roughly a third**: ~585 MB against 1.2.0's
+  ~950 MB, and below 1.1.0's ~653 MB (same server, same ten requests, two
+  runs each). Start-up is also about half as long, since only one package is
+  warmed up. Disk is unchanged at ~250 MB — the stress model still ships
+  inside the whole `v5_5_ru` package.
+- **Upgrading:** a saved `voice: xenia` (or `baya`, `kseniya`, `aidar`,
+  `eugene`) no longer validates — open the add-on's Configuration tab and
+  pick a voice once. Assist pipelines pinned to one of those need re-picking
+  too, under **Settings → Voice assistants**.
+
 ## 1.2.0
 
 - **29 new voices: the Russian speakers of Silero's multilingual

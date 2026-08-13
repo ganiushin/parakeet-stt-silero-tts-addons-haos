@@ -4,33 +4,33 @@ Loads the torch.package models downloaded by scripts/bootstrap.py and serves
 them over the Wyoming protocol with streaming synthesis support.
 
 Designed for one specific use case: natural Russian voices for Home
-Assistant Assist pipelines on modest x86/ARM CPUs. Two Silero v5 packages
-are loaded and their Russian voices offered as one list: the 29 `ru_`
-speakers of the multilingual v5_cis_base, and the 5 of the Russian-only
-v5_5_ru, which also provides the stress model the former lacks.
+Assistant Assist pipelines on modest x86/ARM CPUs. No model selection — just
+Silero v5: the Russian half of v5_cis_base for the voices, plus the stress
+model lifted out of v5_5_ru (see _load_accentor).
 """
 from __future__ import annotations
 
 import argparse
 import asyncio
+import gc
 import logging
 import os
 import sys
 import time
 from functools import partial
-from typing import Dict, NamedTuple
+from typing import List
 
 import torch
 from wyoming.info import Attribution, Info, TtsProgram, TtsVoice
 from wyoming.server import AsyncServer
 
 from . import __version__
-from .handler import SileroEventHandler, Voice
+from .handler import SileroEventHandler
 
 _LOGGER = logging.getLogger(__name__)
 
-CIS_FILE = "v5_cis_base.pt"
-RU_FILE = "v5_5_ru.pt"
+MODEL_FILE = "v5_cis_base.pt"
+ACCENTOR_FILE = "v5_5_ru.pt"
 
 # v5_cis_base is a multilingual model; every voice was recorded by a native
 # speaker of one of its languages, and the `ru_` ones are those same people
@@ -60,45 +60,27 @@ _VOICE_ORIGINS = {
 }
 
 
-# The five Russian-only voices, described the way Silero describes them.
-_V5_5_DESCRIPTIONS = {
-    "xenia": "Female, neutral",
-    "baya": "Female, soft",
-    "kseniya": "Female, bright",
-    "aidar": "Male, neutral",
-    "eugene": "Male, low",
-}
-
-
 def _voice_description(speaker: str) -> str | None:
     origin = _VOICE_ORIGINS.get(speaker.removeprefix("ru_"))
-    if origin:
-        return f"Russian, {origin} speaker"
-    return _V5_5_DESCRIPTIONS.get(speaker)
+    return f"Russian, {origin} speaker" if origin else None
 
 
-def _load(path: str):
-    model = torch.package.PackageImporter(path).load_pickle("tts_models", "model")
-    model.to("cpu")
-    return model
+def _load_accentor(path: str):
+    """Return the Russian stress/homograph model out of v5_5_ru.
 
-
-def _build_voices(cis, ru5) -> Dict[str, Voice]:
-    """Map every offered speaker to the model that can say it.
-
-    v5_cis_base is multilingual; only its Russian speakers are offered, since
-    the add-on's normalization and stress model are Russian-only. It also has
-    no accentor of its own and wants text that arrives already stressed —
-    v5_5_ru stresses internally instead, exactly as it always has.
+    v5_cis_base carries none of its own: it wants every word already
+    stressed ("к+ошка") and guesses badly otherwise. So the Russian-only
+    package is opened purely to lift that one object out, and its voices —
+    the far larger part — are dropped again right away.
     """
-    voices = {s: Voice(model=cis, version="v5-cis", accent=True)
-              for s in cis.speakers if s.startswith("ru_")}
-    voices.update({s: Voice(model=ru5, version="v5.5", accent=False)
-                   for s in ru5.speakers})
-    return voices
+    model = torch.package.PackageImporter(path).load_pickle("tts_models", "model")
+    accentor = model.packages[0].accentor
+    del model
+    gc.collect()
+    return accentor
 
 
-def _build_wyoming_info(voices: Dict[str, Voice]) -> Info:
+def _build_wyoming_info(speakers: List[str]) -> Info:
     silero_attribution = Attribution(
         name="Silero (snakers4/silero-models)",
         url="https://github.com/snakers4/silero-models",
@@ -119,10 +101,10 @@ def _build_wyoming_info(voices: Dict[str, Voice]) -> Info:
                 description=_voice_description(speaker),
                 attribution=silero_attribution,
                 installed=True,
-                version=voice.version,
+                version="v5-cis",
                 languages=["ru"],
             )
-            for speaker, voice in voices.items()
+            for speaker in speakers
         ],
     )])
 
@@ -184,8 +166,9 @@ async def main() -> None:
     torch.set_num_threads(max(1, args.threads))
 
     model_dir = os.path.join(args.data_dir, "silero")
-    paths = [os.path.join(model_dir, name) for name in (CIS_FILE, RU_FILE)]
-    for path in paths:
+    accentor_path = os.path.join(model_dir, ACCENTOR_FILE)
+    model_path = os.path.join(model_dir, MODEL_FILE)
+    for path in (accentor_path, model_path):
         if not os.path.exists(path):
             _LOGGER.error(
                 "Model not found at %s. The entrypoint should fetch it on "
@@ -195,47 +178,47 @@ async def main() -> None:
             )
             sys.exit(1)
 
+    # Accentor first, so v5_5_ru's voices are freed before the ones we keep
+    # are read in and peak memory stays at one model plus change.
+    _LOGGER.info("Loading Russian stress model from %s ...", accentor_path)
     t0 = time.perf_counter()
-    _LOGGER.info("Loading Silero models from %s ...", model_dir)
-    cis, ru5 = (_load(path) for path in paths)
-    accentor = ru5.packages[0].accentor
-    voices = _build_voices(cis, ru5)
-    _LOGGER.info("Models loaded in %.1f s; voices: %s",
-                 time.perf_counter() - t0, list(voices))
+    accentor = _load_accentor(accentor_path)
+    _LOGGER.info("Stress model loaded in %.1f s", time.perf_counter() - t0)
+
+    _LOGGER.info("Loading Silero model from %s ...", model_path)
+    t0 = time.perf_counter()
+    importer = torch.package.PackageImporter(model_path)
+    model = importer.load_pickle("tts_models", "model")
+    model.to("cpu")
+    # The package is multilingual; only the Russian voices are offered.
+    speakers = [s for s in model.speakers if s.startswith("ru_")]
+    _LOGGER.info("Model loaded in %.1f s; Russian speakers: %s",
+                 time.perf_counter() - t0, speakers)
 
     voice = args.voice
-    if voice not in voices:
-        default = next(iter(voices))
-        _LOGGER.warning("Voice %r is not one of the offered voices; using %s",
-                        voice, default)
-        voice = default
+    if voice not in speakers:
+        _LOGGER.warning("Voice %r not among the Russian speakers; using %s",
+                        voice, speakers[0])
+        voice = speakers[0]
 
-    # The first apply_tts call on a model pays one-time lazy-init costs (~10x
-    # a normal request), so warm both up now rather than make whoever
-    # switches voices wait for it. Doubles as a self-test that the models and
-    # the accentor work together.
+    # First apply_tts call pays one-time lazy-init costs (~10x a normal
+    # request); warm up now so the first real request is instant. Doubles as
+    # a self-test that model and stress model work together.
     t0 = time.perf_counter()
-    warmed = []
-    for speaker in (voice, *voices):
-        entry = voices[speaker]
-        if any(entry.model is model for model in warmed):
-            continue
-        text = "Голосовой сервер запущен."
-        entry.model.apply_tts(text=accentor(text) if entry.accent else text,
-                              speaker=speaker, sample_rate=args.sample_rate)
-        warmed.append(entry.model)
-    _LOGGER.info("Warm-up synthesis of %d models took %.2f s",
-                 len(warmed), time.perf_counter() - t0)
+    model.apply_tts(text=accentor("Голосовой сервер запущен."), speaker=voice,
+                    sample_rate=args.sample_rate)
+    _LOGGER.info("Warm-up synthesis took %.2f s", time.perf_counter() - t0)
 
     server = AsyncServer.from_uri(args.uri)
     model_lock = asyncio.Lock()
-    info = _build_wyoming_info(voices)
+    info = _build_wyoming_info(speakers)
     _LOGGER.info("Ready. Listening on %s (voice=%s rate=%d)",
                  args.uri, voice, args.sample_rate)
     await server.run(partial(
-        SileroEventHandler, info, voices, model_lock,
+        SileroEventHandler, info, model, model_lock,
         accentor=accentor,
         voice=voice,
+        speakers=speakers,
         sample_rate=args.sample_rate,
         transliterate=not args.no_transliterate,
     ))

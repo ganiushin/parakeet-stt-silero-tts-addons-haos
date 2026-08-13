@@ -101,14 +101,13 @@ voices over the Wyoming protocol — markedly more natural than Piper's Russian
 voices, and still fully local. No GPU or NPU needed: synthesis runs ~50–100×
 faster than real time on two CPU threads.
 
-- **34 voices** — the Russian half of Silero's multilingual `v5_cis_base`,
-  plus the five of the Russian-only `v5_5_ru`
+- **29 voices** — the Russian half of Silero's multilingual `v5_cis_base`
 - **Streaming synthesis** — long answers start playing sentence by sentence
 - **Text normalization** — the Silero model silently drops digits and Latin
   script, so the add-on expands numbers to Russian words (`21,5 °C` →
   «двадцать одна целая пять десятых градуса Цельсия») and transliterates
   Latin words, then marks the stresses the voices need
-- **Memory** — ~950 MB resident with both packages in use; **Disk** — ~250 MB
+- **Memory** — ~585 MB resident; **Disk** — ~250 MB (model files)
 
 ### Everything this add-on downloads
 
@@ -118,11 +117,11 @@ faster than real time on two CPU threads.
 | `torch` 2.8.0 (CPU wheel) | [download.pytorch.org/whl/cpu](https://download.pytorch.org/whl/cpu) | version pinned in Dockerfile |
 | Python packages (`wyoming==1.7.2`, `num2words==0.5.14`, …) | PyPI | versions pinned in [`pyproject.toml`](./wyoming_silero_tts/silero/pyproject.toml) |
 | Silero model `v5_cis_base.pt` (~92 MB, the voices) | [models.silero.ai](https://models.silero.ai/models/tts/ru/v5_cis_base.pt) | **SHA-256 pinned** in [`bootstrap.py`](./wyoming_silero_tts/silero/scripts/bootstrap.py), downloaded at first start |
-| Silero model `v5_5_ru.pt` (~145 MB, 5 voices + the stress model both packages use) | [models.silero.ai](https://models.silero.ai/models/tts/ru/v5_5_ru.pt) | **SHA-256 pinned** in [`bootstrap.py`](./wyoming_silero_tts/silero/scripts/bootstrap.py), downloaded at first start |
+| Silero model `v5_5_ru.pt` (~145 MB, opened only for its stress model) | [models.silero.ai](https://models.silero.ai/models/tts/ru/v5_5_ru.pt) | **SHA-256 pinned** in [`bootstrap.py`](./wyoming_silero_tts/silero/scripts/bootstrap.py), downloaded at first start |
 
 The add-on code is MIT, and so are the `v5_cis_base` voices; the `v5_5_ru`
-weights are **CC BY-NC-SA 4.0** (free for personal, non-commercial use).
-Options and troubleshooting: see
+weights, downloaded for the stress model, are **CC BY-NC-SA 4.0** (free for
+personal, non-commercial use). Options and troubleshooting: see
 [the add-on docs](./wyoming_silero_tts/DOCS.md).
 
 ## Credits

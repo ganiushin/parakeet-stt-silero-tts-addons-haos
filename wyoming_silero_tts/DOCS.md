@@ -1,28 +1,27 @@
 # Wyoming Silero TTS
 
-Runs [Silero](https://github.com/snakers4/silero-models) `v5_cis_base` and
-`v5_5_ru` Russian text-to-speech on the CPU and exposes their 34 voices over
-the Wyoming protocol. Use it as the TTS engine in Assist voice pipelines
-instead of Piper — the voices are markedly more natural than Piper's Russian
-ones.
+Runs [Silero](https://github.com/snakers4/silero-models) `v5_cis_base`
+Russian text-to-speech on the CPU and exposes its 29 Russian voices over the
+Wyoming protocol. Use it as the TTS engine in Assist voice pipelines instead
+of Piper — the voices are markedly more natural than Piper's Russian ones.
 
 ## Requirements
 
 - Any amd64 or aarch64 machine; no GPU or NPU needed. Synthesis runs ~50–100×
   faster than real time on two CPU threads.
 - ~250 MB free disk space in the add-on data volume (the model files).
-- ~1.2 GB of free RAM for the add-on (~950 MB resident once both voice
-  families have been used; ~585 MB if only the `ru_` ones ever are).
+- ~750 MB of free RAM for the add-on (~585 MB resident after warm-up).
 
 ## First start
 
 On first start the add-on downloads two model packages (~237 MB in total,
-SHA-256 verified, resumable) into its persistent data directory:
-`v5_cis_base`, whose 29 Russian voices this add-on offers, and the
-Russian-only `v5_5_ru`, which brings five more voices and the stress and
-homograph model that the first one lacks — `v5_cis_base` ships none of its
-own and wants every word already stressed. Later starts take seconds; a short
-warm-up synthesis of each package runs before the port opens.
+SHA-256 verified, resumable) into its persistent data directory: the voices
+(`v5_cis_base`) and the Russian-only `v5_5_ru`, which is opened solely for
+its stress and homograph model — `v5_cis_base` ships none of its own and
+wants every word already stressed, and `v5_5_ru`'s own voices are freed again
+as soon as that model is out. Later starts still take a while: on a modest
+CPU, loading and warming up the voices before the port opens can take half a
+minute.
 
 Once the Wyoming server is listening, the add-on registers itself with Home
 Assistant and the **Wyoming Protocol** integration is offered under
@@ -40,21 +39,10 @@ for your pipeline.
 
 ### `voice`
 
-Default speaker, used when the pipeline does not specify one. Five come from
-the Russian-only `v5_5_ru`:
-
-| voice | |
-|---|---|
-| `xenia` | female, neutral |
-| `baya` | female, soft |
-| `kseniya` | female, bright |
-| `aidar` | male, neutral |
-| `eugene` | male, low |
-
-The other 29 come from `v5_cis_base`. It is a multilingual model, and each
-voice was recorded by a native speaker of one of its languages; the ones
-offered here are those same people reading Russian, which is where the light
-accents come from:
+Default speaker, used when the pipeline does not specify one. `v5_cis_base`
+is a multilingual model, and each voice was recorded by a native speaker of
+one of its languages; the 29 offered here are those same people reading
+Russian, which is where the light accents come from:
 
 | voice | recorded by a speaker of |
 |---|---|
@@ -78,8 +66,8 @@ accents come from:
 | `ru_alexandr` | Erzya |
 | `ru_zinaida` | Yakut |
 
-All 34 are always installed; the pipeline can pick any of them per request.
-`v5_cis_base`'s non-Russian voices are not offered — the add-on's text
+All 29 are always installed; the pipeline can pick any of them per request.
+The model's non-Russian voices are not offered — the add-on's text
 normalization and stress model are Russian-only.
 
 ### `sample_rate`
@@ -105,20 +93,19 @@ The model also drops bare digits, so the add-on expands them before
 synthesis: integers and decimals become Russian words with the unit in
 agreement (`21,5°C` → «двадцать одна целая пять десятых градуса»), times are
 read as hours and minutes (`13:45` → «тринадцать сорок пять»), and `%`, `°C`,
-`°F`, `№` are spelled out. For the `ru_` voices the result then goes through
-the stress model, which marks the stressed vowel of every word and resolves
-homographs («з+амок» vs «зам+ок») — `v5_cis_base` has no stress of its own
-and would otherwise guess. The five `v5_5_ru` voices run that same model
-inside `apply_tts`, so both families are stressed identically.
+`°F`, `№` are spelled out. The result then goes through the stress model,
+which marks the stressed vowel of every word and resolves homographs
+(«з+амок» vs «зам+ок») — `v5_cis_base` has no stress of its own and would
+otherwise guess.
 
 ## Model license
 
 The add-on code is MIT. So are the `v5_cis_base` voice weights
 ([LICENSE_CIS](https://github.com/snakers4/silero-models/blob/master/LICENSE_CIS)).
-The `v5_5_ru` package — its five voices and the stress model both families
-use — is distributed under **CC BY-NC-SA 4.0**: free for personal,
-non-commercial use, which is what a home Assist pipeline is. Commercial
-deployments need a license from Silero.
+The `v5_5_ru` package, which the add-on downloads for its stress model, is
+distributed under **CC BY-NC-SA 4.0** — free for personal, non-commercial
+use, which is what a home Assist pipeline is. Commercial deployments need a
+license from Silero.
 
 ## Troubleshooting
 

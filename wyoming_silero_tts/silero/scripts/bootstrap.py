@@ -21,7 +21,7 @@ MODELS = (
     # The 29 ru_ voices (2026-08-13).
     ("v5_cis_base.pt",
      "ba41b18f6a707ad93605a162998865e7c087153d2e010a26dd02229dab0e672a"),
-    # Five more voices, plus the Russian stress/homograph model that
+    # Opened only for its Russian stress/homograph model, which
     # v5_cis_base does not ship (2026-07-05).
     ("v5_5_ru.pt",
      "50081637b602126ee06cb3bc8a744d25651d2da149ee8864b9a379bfdd934437"),
