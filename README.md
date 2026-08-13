@@ -101,12 +101,14 @@ voices over the Wyoming protocol — markedly more natural than Piper's Russian
 voices, and still fully local. No GPU or NPU needed: synthesis runs ~50–100×
 faster than real time on two CPU threads.
 
-- **5 voices** — xenia, baya, kseniya (female), aidar, eugene (male)
+- **34 voices** — the Russian half of Silero's multilingual `v5_cis_base`,
+  plus the five of the Russian-only `v5_5_ru`
 - **Streaming synthesis** — long answers start playing sentence by sentence
 - **Text normalization** — the Silero model silently drops digits and Latin
   script, so the add-on expands numbers to Russian words (`21,5 °C` →
-  «двадцать один и пять градусов Цельсия») and transliterates Latin words
-- **Memory** — ~750 MB resident; **Disk** — ~150 MB (model file)
+  «двадцать одна целая пять десятых градуса Цельсия») and transliterates
+  Latin words, then marks the stresses the voices need
+- **Memory** — ~950 MB resident with both packages in use; **Disk** — ~250 MB
 
 ### Everything this add-on downloads
 
@@ -115,10 +117,12 @@ faster than real time on two CPU threads.
 | `ubuntu:24.04` base image | `mirror.gcr.io/library/ubuntu` | image digest resolved at build |
 | `torch` 2.8.0 (CPU wheel) | [download.pytorch.org/whl/cpu](https://download.pytorch.org/whl/cpu) | version pinned in Dockerfile |
 | Python packages (`wyoming==1.7.2`, `num2words==0.5.14`, …) | PyPI | versions pinned in [`pyproject.toml`](./wyoming_silero_tts/silero/pyproject.toml) |
-| Silero model `v5_5_ru.pt` (~139 MB) | [models.silero.ai](https://models.silero.ai/models/tts/ru/v5_5_ru.pt) | **SHA-256 pinned** in [`bootstrap.py`](./wyoming_silero_tts/silero/scripts/bootstrap.py), downloaded at first start |
+| Silero model `v5_cis_base.pt` (~92 MB, the voices) | [models.silero.ai](https://models.silero.ai/models/tts/ru/v5_cis_base.pt) | **SHA-256 pinned** in [`bootstrap.py`](./wyoming_silero_tts/silero/scripts/bootstrap.py), downloaded at first start |
+| Silero model `v5_5_ru.pt` (~145 MB, 5 voices + the stress model both packages use) | [models.silero.ai](https://models.silero.ai/models/tts/ru/v5_5_ru.pt) | **SHA-256 pinned** in [`bootstrap.py`](./wyoming_silero_tts/silero/scripts/bootstrap.py), downloaded at first start |
 
-The add-on code is MIT; the Silero model weights are **CC BY-NC-SA 4.0**
-(free for personal, non-commercial use). Options and troubleshooting: see
+The add-on code is MIT, and so are the `v5_cis_base` voices; the `v5_5_ru`
+weights are **CC BY-NC-SA 4.0** (free for personal, non-commercial use).
+Options and troubleshooting: see
 [the add-on docs](./wyoming_silero_tts/DOCS.md).
 
 ## Credits
@@ -126,4 +130,4 @@ The add-on code is MIT; the Silero model weights are **CC BY-NC-SA 4.0**
 - [cibernox/wyoming-parakeet-on-intel-npu](https://github.com/cibernox/wyoming-parakeet-on-intel-npu) — the original project the STT add-on packages (MIT, © Miguel Camba)
 - [istupakov/onnx-asr](https://github.com/istupakov/onnx-asr) and the [ONNX export](https://huggingface.co/istupakov/parakeet-tdt-0.6b-v3-onnx) of the model (MIT / CC-BY-4.0)
 - [NVIDIA Parakeet TDT 0.6B v3](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3) — the STT model itself (CC-BY-4.0)
-- [snakers4/silero-models](https://github.com/snakers4/silero-models) — the Silero TTS models (CC BY-NC-SA 4.0, © Silero)
+- [snakers4/silero-models](https://github.com/snakers4/silero-models) — the Silero TTS models (`v5_cis_base` MIT, `v5_5_ru` CC BY-NC-SA 4.0, © Silero)

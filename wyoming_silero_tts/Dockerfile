@@ -11,7 +11,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1 \
     TZ=Etc/UTC \
     DATA_DIR=/data \
-    VOICE=xenia \
+    VOICE=ru_zhadyra \
     SAMPLE_RATE=48000 \
     THREADS=2 \
     TRANSLITERATE=true
@@ -42,8 +42,8 @@ RUN pip install --no-cache-dir --upgrade pip \
 
 EXPOSE 10200
 
-# No HEALTHCHECK / supervisor watchdog: the first start downloads the model
-# (~139 MB) before the port opens; on a slow line that outlives probe windows.
+# No HEALTHCHECK / supervisor watchdog: the first start downloads the models
+# (~237 MB) before the port opens; on a slow line that outlives probe windows.
 
 COPY run.sh /run.sh
 RUN chmod +x /run.sh

@@ -10,7 +10,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
-from typing import List, Optional
+from typing import Dict, List, NamedTuple, Optional
 
 import torch
 from wyoming.audio import AudioChunk, AudioStart, AudioStop
@@ -34,6 +34,16 @@ _SENTENCE_END = re.compile(r'[.!?…]+["»)\]]*\s+')
 MAX_SENTENCE_CHARS = 400
 # ~100 ms of audio per AudioChunk event.
 CHUNK_SECONDS = 0.1
+
+
+class Voice(NamedTuple):
+    """One offered speaker: which model says it, and how it wants its text."""
+
+    model: object
+    version: str
+    # True for v5_cis_base, which has no accentor and needs the stress marks
+    # put in for it; v5_5_ru does that itself, inside apply_tts.
+    accent: bool
 
 
 class SentenceSplitter:
@@ -74,10 +84,11 @@ class SileroEventHandler(AsyncEventHandler):
     def __init__(
         self,
         wyoming_info: Info,
-        model,
+        voices: Dict[str, Voice],
         model_lock: asyncio.Lock,
         *args,
-        voice: str = "xenia",
+        accentor,
+        voice: str,
         sample_rate: int = 48000,
         transliterate: bool = True,
         **kwargs,
@@ -85,7 +96,8 @@ class SileroEventHandler(AsyncEventHandler):
         super().__init__(*args, **kwargs)
 
         self.wyoming_info_event = wyoming_info.event()
-        self.model = model
+        self.voices = voices
+        self.accentor = accentor
         self.model_lock = model_lock
         self.default_voice = voice
         self.sample_rate = sample_rate
@@ -98,7 +110,7 @@ class SileroEventHandler(AsyncEventHandler):
 
     def _resolve_voice(self) -> str:
         requested = self._request_voice
-        if requested and requested in self.model.speakers:
+        if requested and requested in self.voices:
             return requested
         if requested:
             _LOGGER.warning("Unknown voice %r; using %s", requested, self.default_voice)
@@ -109,14 +121,21 @@ class SileroEventHandler(AsyncEventHandler):
         text = normalize(sentence, transliterate=self.transliterate)
         if not text:
             return
-        voice = self._resolve_voice()
+        speaker = self._resolve_voice()
+        voice = self.voices[speaker]
         loop = asyncio.get_running_loop()
         async with self.model_lock:
             try:
+                # The accentor runs under the same lock and in the same
+                # executor call: it is one more torch model, and v5_cis_base
+                # needs the stress marks it adds ("к+ошка") to pronounce
+                # anything correctly.
                 audio = await loop.run_in_executor(
                     None,
-                    lambda: self.model.apply_tts(
-                        text=text, speaker=voice, sample_rate=self.sample_rate
+                    lambda: voice.model.apply_tts(
+                        text=self.accentor(text) if voice.accent else text,
+                        speaker=speaker,
+                        sample_rate=self.sample_rate,
                     ),
                 )
             except Exception:

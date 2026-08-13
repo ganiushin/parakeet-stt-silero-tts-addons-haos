@@ -1,22 +1,28 @@
 # Wyoming Silero TTS
 
-Runs [Silero](https://github.com/snakers4/silero-models) `v5_5_ru` Russian
-text-to-speech on the CPU and exposes it over the Wyoming protocol. Use it as
-the TTS engine in Assist voice pipelines instead of Piper — the voices are
-markedly more natural than Piper's Russian ones.
+Runs [Silero](https://github.com/snakers4/silero-models) `v5_cis_base` and
+`v5_5_ru` Russian text-to-speech on the CPU and exposes their 34 voices over
+the Wyoming protocol. Use it as the TTS engine in Assist voice pipelines
+instead of Piper — the voices are markedly more natural than Piper's Russian
+ones.
 
 ## Requirements
 
 - Any amd64 or aarch64 machine; no GPU or NPU needed. Synthesis runs ~50–100×
   faster than real time on two CPU threads.
-- ~150 MB free disk space in the add-on data volume (the model file).
-- ~1 GB of free RAM for the add-on (~750 MB resident after warm-up).
+- ~250 MB free disk space in the add-on data volume (the model files).
+- ~1.2 GB of free RAM for the add-on (~950 MB resident once both voice
+  families have been used; ~585 MB if only the `ru_` ones ever are).
 
 ## First start
 
-On first start the add-on downloads the model package (~139 MB, SHA-256
-verified, resumable) into its persistent data directory. Later starts take
-seconds; a short warm-up synthesis runs before the port opens.
+On first start the add-on downloads two model packages (~237 MB in total,
+SHA-256 verified, resumable) into its persistent data directory:
+`v5_cis_base`, whose 29 Russian voices this add-on offers, and the
+Russian-only `v5_5_ru`, which brings five more voices and the stress and
+homograph model that the first one lacks — `v5_cis_base` ships none of its
+own and wants every word already stressed. Later starts take seconds; a short
+warm-up synthesis of each package runs before the port opens.
 
 Once the Wyoming server is listening, the add-on registers itself with Home
 Assistant and the **Wyoming Protocol** integration is offered under
@@ -34,17 +40,47 @@ for your pipeline.
 
 ### `voice`
 
-Default speaker, used when the pipeline does not specify one:
+Default speaker, used when the pipeline does not specify one. Five come from
+the Russian-only `v5_5_ru`:
 
 | voice | |
 |---|---|
-| `xenia` | female, neutral (default) |
+| `xenia` | female, neutral |
 | `baya` | female, soft |
 | `kseniya` | female, bright |
 | `aidar` | male, neutral |
 | `eugene` | male, low |
 
-All five are always installed; the pipeline can pick any of them per request.
+The other 29 come from `v5_cis_base`. It is a multilingual model, and each
+voice was recorded by a native speaker of one of its languages; the ones
+offered here are those same people reading Russian, which is where the light
+accents come from:
+
+| voice | recorded by a speaker of |
+|---|---|
+| `ru_zhadyra` (default), `ru_zhazira` | Kazakh |
+| `ru_aigul`, `ru_alfia`, `ru_alfia2`, `ru_miyau`, `ru_ramilia` | Bashkir |
+| `ru_albina`, `ru_marat` | Tatar |
+| `ru_igor`, `ru_roman` | Ukrainian |
+| `ru_dmitriy` | Belarusian |
+| `ru_kejilgan`, `ru_kermen` | Kalmyk |
+| `ru_onaoy`, `ru_safarhuja` | Tajik |
+| `ru_karina`, `ru_sibday` | Khakas |
+| `ru_gamat` | Azerbaijani |
+| `ru_zara` | Armenian |
+| `ru_vika` | Georgian |
+| `ru_eduard` | Kabardian |
+| `ru_nurgul` | Kyrgyz |
+| `ru_oksana` | Moksha |
+| `ru_bogdan` | Udmurt |
+| `ru_saida` | Uzbek |
+| `ru_ekaterina` | Chuvash |
+| `ru_alexandr` | Erzya |
+| `ru_zinaida` | Yakut |
+
+All 34 are always installed; the pipeline can pick any of them per request.
+`v5_cis_base`'s non-Russian voices are not offered — the add-on's text
+normalization and stress model are Russian-only.
 
 ### `sample_rate`
 
@@ -58,7 +94,7 @@ very weak CPU.
 
 ### `transliterate`
 
-The Russian Silero model silently skips Latin script. When enabled (default),
+The Silero model silently skips Latin script. When enabled (default),
 Latin words — device names, "Wi-Fi", "Spotify" — are transliterated to
 Cyrillic so they are spoken instead of dropped. The transliteration is
 letter-based and approximate; disable it if you prefer Latin words silent.
@@ -66,16 +102,23 @@ letter-based and approximate; disable it if you prefer Latin words silent.
 ## Text normalization
 
 The model also drops bare digits, so the add-on expands them before
-synthesis: integers and decimals become Russian words (`21,5` → «двадцать
-один и пять»), times are read as hours and minutes (`13:45` → «тринадцать
-сорок пять»), and `%`, `°C`, `°F`, `№` are spelled out.
+synthesis: integers and decimals become Russian words with the unit in
+agreement (`21,5°C` → «двадцать одна целая пять десятых градуса»), times are
+read as hours and minutes (`13:45` → «тринадцать сорок пять»), and `%`, `°C`,
+`°F`, `№` are spelled out. For the `ru_` voices the result then goes through
+the stress model, which marks the stressed vowel of every word and resolves
+homographs («з+амок» vs «зам+ок») — `v5_cis_base` has no stress of its own
+and would otherwise guess. The five `v5_5_ru` voices run that same model
+inside `apply_tts`, so both families are stressed identically.
 
 ## Model license
 
-The add-on code is MIT. The Silero model weights are distributed by
-[snakers4/silero-models](https://github.com/snakers4/silero-models) under
-**CC BY-NC-SA 4.0** — free for personal, non-commercial use, which is what a
-home Assist pipeline is. Commercial deployments need a license from Silero.
+The add-on code is MIT. So are the `v5_cis_base` voice weights
+([LICENSE_CIS](https://github.com/snakers4/silero-models/blob/master/LICENSE_CIS)).
+The `v5_5_ru` package — its five voices and the stress model both families
+use — is distributed under **CC BY-NC-SA 4.0**: free for personal,
+non-commercial use, which is what a home Assist pipeline is. Commercial
+deployments need a license from Silero.
 
 ## Troubleshooting
 

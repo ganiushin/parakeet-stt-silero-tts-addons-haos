@@ -1,8 +1,8 @@
-"""Bootstrap helper: download the Silero TTS model package.
+"""Bootstrap helper: download the Silero TTS model packages.
 
 Run once on first start (from docker-entrypoint.sh) to populate /data.
 Idempotent — a present, size-nonzero model file is trusted (it was SHA-256
-verified when first downloaded; re-hashing 139 MB on every start is wasted
+verified when first downloaded; re-hashing 237 MB on every start is wasted
 startup time on the low-power boxes this add-on targets).
 """
 from __future__ import annotations
@@ -14,11 +14,18 @@ import sys
 import time
 from pathlib import Path
 
-MODEL_FILE = "v5_5_ru.pt"
-MODEL_URL = f"https://models.silero.ai/models/tts/ru/{MODEL_FILE}"
-# Pinned digest of the upstream package (2026-07-05) so a silently re-published
-# model can't slip in.
-MODEL_SHA256 = "50081637b602126ee06cb3bc8a744d25651d2da149ee8864b9a379bfdd934437"
+BASE_URL = "https://models.silero.ai/models/tts/ru/"
+# Digests of the upstream packages are pinned so a silently re-published model
+# can't slip in.
+MODELS = (
+    # The 29 ru_ voices (2026-08-13).
+    ("v5_cis_base.pt",
+     "ba41b18f6a707ad93605a162998865e7c087153d2e010a26dd02229dab0e672a"),
+    # Five more voices, plus the Russian stress/homograph model that
+    # v5_cis_base does not ship (2026-07-05).
+    ("v5_5_ru.pt",
+     "50081637b602126ee06cb3bc8a744d25651d2da149ee8864b9a379bfdd934437"),
+)
 
 
 def _fetch_resumable(url: str, tmp: Path, attempts: int = 3) -> None:
@@ -50,8 +57,8 @@ def _fetch_resumable(url: str, tmp: Path, attempts: int = 3) -> None:
             time.sleep(5)
 
 
-def download_model(model_dir: Path) -> None:
-    target = model_dir / MODEL_FILE
+def download_model(model_dir: Path, name: str, sha256: str) -> None:
+    target = model_dir / name
     if target.exists() and target.stat().st_size > 0:
         return
 
@@ -60,14 +67,14 @@ def download_model(model_dir: Path) -> None:
     # Two full tries: a checksum mismatch discards the file and re-downloads
     # once; a second mismatch is a hard error (the model is mandatory).
     for attempt in (1, 2):
-        print(f"[bootstrap] Downloading {MODEL_FILE} ...", flush=True)
+        print(f"[bootstrap] Downloading {name} ...", flush=True)
         t0 = time.perf_counter()
-        _fetch_resumable(MODEL_URL, tmp)
+        _fetch_resumable(BASE_URL + name, tmp)
         digest = hashlib.sha256()
         with open(tmp, "rb") as f:
             for chunk in iter(lambda: f.read(1 << 20), b""):
                 digest.update(chunk)
-        if digest.hexdigest() == MODEL_SHA256:
+        if digest.hexdigest() == sha256:
             tmp.rename(target)
             print(
                 f"[bootstrap]   done in {time.perf_counter()-t0:.1f}s "
@@ -75,11 +82,11 @@ def download_model(model_dir: Path) -> None:
                 flush=True,
             )
             return
-        print(f"[bootstrap]   checksum mismatch for {MODEL_FILE}; "
+        print(f"[bootstrap]   checksum mismatch for {name}; "
               f"discarding (attempt {attempt}/2)", file=sys.stderr)
         tmp.unlink()
 
-    print("[bootstrap] FATAL: model download failed checksum verification twice",
+    print(f"[bootstrap] FATAL: {name} failed checksum verification twice",
           file=sys.stderr)
     sys.exit(1)
 
@@ -89,7 +96,9 @@ def main() -> None:
     ap.add_argument("--data-dir", default=os.environ.get("DATA_DIR", "/data"))
     args = ap.parse_args()
 
-    download_model(Path(args.data_dir) / "silero")
+    model_dir = Path(args.data_dir) / "silero"
+    for name, sha256 in MODELS:
+        download_model(model_dir, name, sha256)
     print("[bootstrap] All assets ready.", flush=True)
 
 

@@ -7,7 +7,7 @@ opt() {
     jq -r --arg k "$1" --arg d "$2" '.[$k] // $d | tostring' "$OPTIONS" 2>/dev/null || echo "$2"
 }
 
-export VOICE="$(opt voice xenia)"
+export VOICE="$(opt voice ru_zhadyra)"
 export SAMPLE_RATE="$(opt sample_rate 48000)"
 export THREADS="$(opt threads 2)"
 export TRANSLITERATE="$(opt transliterate true)"

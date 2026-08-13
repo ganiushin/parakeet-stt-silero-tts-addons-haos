@@ -3,7 +3,8 @@
 Silero v5 Russian text-to-speech served over the Wyoming protocol — a
 natural-sounding replacement for Piper's Russian voices in Assist pipelines.
 
-- 5 voices (xenia, baya, kseniya — female; aidar, eugene — male)
+- 34 Russian voices — 29 from Silero's multilingual `v5_cis_base`, 5 from
+  the Russian-only `v5_5_ru`, whose stress and homograph model both use
 - Streaming synthesis: long answers start playing sentence by sentence
 - Runs on CPU far faster than real time; no GPU or NPU needed
 - Expands numbers to words and transliterates Latin — the Silero model would

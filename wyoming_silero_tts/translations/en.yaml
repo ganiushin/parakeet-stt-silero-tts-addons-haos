@@ -2,9 +2,11 @@ configuration:
   voice:
     name: Voice
     description: >-
-      Default Silero speaker. xenia, baya and kseniya are female voices;
-      aidar and eugene are male. The voice pipeline can override this per
-      request.
+      Default Silero speaker. The 29 ru_ voices come from the multilingual
+      v5_cis_base — each recorded by a native speaker of one of its
+      languages, which is where the slight accents come from; xenia, baya,
+      kseniya, aidar and eugene are the Russian-only v5_5_ru ones. The voice
+      pipeline can override this per request.
   sample_rate:
     name: Sample rate
     description: >-
@@ -18,7 +20,7 @@ configuration:
   transliterate:
     name: Transliterate Latin words
     description: >-
-      The Russian Silero model silently skips Latin script. When enabled,
+      The Silero model silently skips Latin script. When enabled,
       Latin words (device names, "Wi-Fi", "Spotify", ...) are transliterated
       to Cyrillic so they are spoken instead of dropped.
 network:
