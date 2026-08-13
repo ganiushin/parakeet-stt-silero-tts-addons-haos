@@ -4,7 +4,7 @@
 on the Intel NPU, and Silero Russian text-to-speech on the CPU.**
 
 [![Home Assistant Add-on](https://img.shields.io/badge/Home%20Assistant-add--on-41BDF5?logo=homeassistant&logoColor=white)](https://www.home-assistant.io/addons/)
-[![License](https://img.shields.io/badge/add--ons-MIT-green)](./wyoming_parakeet_npu/parakeet/LICENSE)
+[![License](https://img.shields.io/badge/add--ons-MIT-green)](./LICENSE)
 
 | Add-on | Replaces | Runs on | Arch |
 |---|---|---|---|
