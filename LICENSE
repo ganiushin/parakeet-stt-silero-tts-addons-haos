@@ -19,16 +19,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
----
-
-This licence covers the add-on code in this repository. Two things inside it
-are not ours to relicense:
-
-- `wyoming_parakeet_npu/parakeet/` is vendored from
-  cibernox/wyoming-parakeet-on-intel-npu (MIT, (c) Miguel Camba); its own
-  LICENSE file travels with it.
-- The model weights the add-ons download at runtime are covered by their
-  upstream licences, not by this one: Parakeet TDT 0.6B v3 and its ONNX
-  export under CC-BY-4.0, Silero `v5_cis_base` under MIT and `v5_5_ru` under
-  CC BY-NC-SA 4.0 (non-commercial). See each add-on's DOCS.md.

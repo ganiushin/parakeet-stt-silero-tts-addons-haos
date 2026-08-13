@@ -124,6 +124,20 @@ weights, downloaded for the stress model, are **CC BY-NC-SA 4.0** (free for
 personal, non-commercial use). Options and troubleshooting: see
 [the add-on docs](./wyoming_silero_tts/DOCS.md).
 
+## Licensing
+
+The add-on code in this repository is [MIT](./LICENSE). Two things inside it
+are not ours to relicense:
+
+- [`wyoming_parakeet_npu/parakeet/`](./wyoming_parakeet_npu/parakeet/) is
+  vendored from cibernox/wyoming-parakeet-on-intel-npu (MIT, © Miguel Camba);
+  its own LICENSE file travels with it.
+- The model weights the add-ons download at runtime keep their upstream
+  licences: Parakeet TDT 0.6B v3 and its ONNX export under **CC-BY-4.0**,
+  Silero `v5_cis_base` under **MIT**, and Silero `v5_5_ru` — needed for the
+  Russian stress model — under **CC BY-NC-SA 4.0**, which is free for
+  personal, non-commercial use only.
+
 ## Credits
 
 - [cibernox/wyoming-parakeet-on-intel-npu](https://github.com/cibernox/wyoming-parakeet-on-intel-npu) — the original project the STT add-on packages (MIT, © Miguel Camba)
