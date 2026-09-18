@@ -108,7 +108,7 @@ faster than real time on two CPU threads.
   «двадцать одна целая пять десятых градуса Цельсия») and transliterates
   Latin words, then marks the stresses the voices need with
   [silero-stress](https://github.com/snakers4/silero-stress)
-- **Memory** — ~700 MB resident in use; **Disk** — ~92 MB (the voice package)
+- **Memory** — ~550 MB resident; **Disk** — ~92 MB (the voice package)
 
 ### Everything this add-on downloads
 

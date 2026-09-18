@@ -10,11 +10,11 @@ of Piper — the voices are markedly more natural than Piper's Russian ones.
 - Any amd64 or aarch64 machine; no GPU or NPU needed. Synthesis runs ~50–100×
   faster than real time on two CPU threads.
 - ~100 MB free disk space in the add-on data volume (the voice package).
-- ~900 MB of free RAM for the add-on. On a 4 GB Home Assistant VM its RAM
-  figure settles at **~17% (~700 MB)** once it has served a few requests,
-  against 11.7% (~480 MB) for 1.3.0 on the same machine. Resident memory
-  climbs over the first requests as torch allocates its synthesis buffers
-  and then stops; the growth is not a leak.
+- ~800 MB of free RAM for the add-on. On a 4 GB Home Assistant VM it settles
+  at **~13.4% (~550 MB)**, against 11.7% (~480 MB) for 1.3.0 on the same
+  machine. Expect up to ~17% for the first hours after a start: the add-on's
+  RAM figure counts page cache, and the ~148 MB of model files it has just
+  read sit there until the kernel ages them out.
 
 ## First start
 

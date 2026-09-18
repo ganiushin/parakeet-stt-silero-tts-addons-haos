@@ -10,13 +10,12 @@
   «Я уже открыл замок в старом замке» is the short version: 1.3.0 said
   «+Я +уже откр+ыл з+амок в ст+аром з+амке», 1.4.0 says «+Я уж+е откр+ыл
   зам+ок в ст+аром з+амке».
-- **It costs about 220 MB.** On a 4 GB Home Assistant VM, both readings taken
-  in regular use, the add-on's own RAM figure goes from **11.7% (~480 MB) on
-  1.3.0 to ~17% (~700 MB)** here. Resident memory climbs over the first few
-  requests as torch allocates its synthesis buffers and then stops, so judge
-  it after a few sentences rather than at start-up. Plan for ~900 MB free.
-  If that does not fit, 1.3.0 is materially lighter and its stress was worse
-  only on homographs.
+- **It costs about 70 MB.** On a 4 GB Home Assistant VM, both settled readings
+  days into a run, the add-on's own RAM figure goes from **11.7% (~480 MB) on
+  1.3.0 to 13.4% (~550 MB)** here. Judge it hours after a start, not minutes:
+  that figure counts page cache, so the ~148 MB of model files just read off
+  disk inflate it to ~17% until the kernel ages them out. Plan for ~800 MB
+  free.
 - **~120 MB of that was avoidable, and is avoided.** The stress model's
   homograph BERT ships with its embedding table packed as int8;
   `silero_stress.load_accentor()` unpacks it as `scale * (weight.clone() -
