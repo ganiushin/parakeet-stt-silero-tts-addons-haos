@@ -10,10 +10,10 @@
   «Я уже открыл замок в старом замке» is the short version: 1.3.0 said
   «+Я +уже откр+ыл з+амок в ст+аром з+амке», 1.4.0 says «+Я уж+е откр+ыл
   зам+ок в ст+аром з+амке».
-- **It costs memory.** Measured on a dev machine, same script and same ten
-  requests through the voices: ~538 MB resident on 1.3.0 against **~666 MB**
-  here — **+128 MB, about +24%**. Scaled to the ~585 MB 1.3.0 reported on a
-  Home Assistant box, expect **~700–720 MB resident**; plan for ~900 MB free.
+- **It costs memory.** On a 4 GB Home Assistant VM, as the add-on's own RAM
+  figure reports it: **11.7% on 1.3.0 against 15.1% here**, or ~480 MB against
+  **~620 MB** — **+140 MB**. (A dev machine running the same ten requests
+  through the voices showed the same step, +128 MB.) Plan for ~800 MB free.
 - **~120 MB of that was avoidable, and is avoided.** The stress model's
   homograph BERT ships with its embedding table packed as int8;
   `silero_stress.load_accentor()` unpacks it as `scale * (weight.clone() -

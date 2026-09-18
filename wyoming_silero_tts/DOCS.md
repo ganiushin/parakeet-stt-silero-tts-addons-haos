@@ -10,8 +10,9 @@ of Piper — the voices are markedly more natural than Piper's Russian ones.
 - Any amd64 or aarch64 machine; no GPU or NPU needed. Synthesis runs ~50–100×
   faster than real time on two CPU threads.
 - ~100 MB free disk space in the add-on data volume (the voice package).
-- ~900 MB of free RAM for the add-on (~700–720 MB resident after warm-up;
-  1.4.0's stress model costs ~128 MB more than 1.3.0's did).
+- ~800 MB of free RAM for the add-on (~620 MB resident after warm-up on a
+  4 GB Home Assistant VM; 1.4.0's stress model costs ~140 MB more than
+  1.3.0's did).
 
 ## First start
 
