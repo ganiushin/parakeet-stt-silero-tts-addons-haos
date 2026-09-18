@@ -1,20 +1,29 @@
 # Wyoming Silero TTS
 
-Runs [Silero](https://github.com/snakers4/silero-models) `v5_cis_base`
-Russian text-to-speech on the CPU and exposes its 29 Russian voices over the
-Wyoming protocol. Use it as the TTS engine in Assist voice pipelines instead
-of Piper — the voices are markedly more natural than Piper's Russian ones.
+A Russian voice for Home Assistant that sounds like someone reading a sentence,
+rather than a machine pronouncing words in a row.
 
-## Requirements
+The add-on runs Silero's neural voices on your own CPU and offers them to
+Assist over the Wyoming protocol. Nothing leaves the house — no cloud, no
+account, no API key — and no GPU is involved: an ordinary CPU produces speech
+far faster than it takes to play it. Set it as the text-to-speech engine of
+your voice pipeline in place of Piper, pick a voice, and that is the setup.
 
-- Any amd64 or aarch64 machine; no GPU or NPU needed. Synthesis runs ~50–100×
-  faster than real time on two CPU threads.
-- ~100 MB free disk space in the add-on data volume (the voice package).
-- ~800 MB of free RAM for the add-on. On a 4 GB Home Assistant VM it settles
-  at **~13.4% (~550 MB)**, against 11.7% (~480 MB) for 1.3.0 on the same
-  machine. Expect up to ~17% for the first hours after a start: the add-on's
-  RAM figure counts page cache, and the ~148 MB of model files it has just
-  read sit there until the kernel ages them out.
+Where it earns its keep is the awkward part of what a smart home says out loud.
+Digits, temperatures and clock times become Russian words with the grammar to
+match — `21,5°C` is read «двадцать одна целая пять десятых градуса» — and every
+word is marked with its stress before it reaches the voice, so «замок» comes out
+as a lock or as a castle depending on the sentence around it.
+
+Long answers start playing while the rest is still being synthesized, so the
+assistant begins speaking immediately instead of pausing to think.
+
+There are 29 voices to choose from; they are listed under **Options** below.
+
+## What you need
+
+- Any amd64 or aarch64 machine. No GPU or NPU.
+- ~100 MB of free disk space for the voice package.
 
 ## First start
 
