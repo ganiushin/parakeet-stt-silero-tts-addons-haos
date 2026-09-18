@@ -1,9 +1,9 @@
 [project]
 name = "wyoming-silero-tts"
-version = "1.3.0"
+version = "1.4.0"
 description = "Wyoming protocol TTS server running Silero v5 Russian voices on CPU"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = { text = "MIT" }
 authors = [{ name = "Maksim Ganyushin" }]
 keywords = ["wyoming", "text-to-speech", "silero", "tts", "russian", "home-assistant"]
@@ -23,6 +23,9 @@ dependencies = [
     "wyoming==1.7.2",
     # The Russian Silero model silently drops digits; num2words expands them.
     "num2words==0.5.14",
+    # Stress and homograph marks for v5_cis_base, which ships none of its own.
+    # Carries its own weights in the wheel, so nothing is fetched at run time.
+    "silero-stress==1.5",
     "numpy",
 ]
 

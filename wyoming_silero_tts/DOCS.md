@@ -9,19 +9,18 @@ of Piper — the voices are markedly more natural than Piper's Russian ones.
 
 - Any amd64 or aarch64 machine; no GPU or NPU needed. Synthesis runs ~50–100×
   faster than real time on two CPU threads.
-- ~250 MB free disk space in the add-on data volume (the model files).
-- ~750 MB of free RAM for the add-on (~585 MB resident after warm-up).
+- ~100 MB free disk space in the add-on data volume (the voice package).
+- ~900 MB of free RAM for the add-on (~700–720 MB resident after warm-up;
+  1.4.0's stress model costs ~128 MB more than 1.3.0's did).
 
 ## First start
 
-On first start the add-on downloads two model packages (~237 MB in total,
-SHA-256 verified, resumable) into its persistent data directory: the voices
-(`v5_cis_base`) and the Russian-only `v5_5_ru`, which is opened solely for
-its stress and homograph model — `v5_cis_base` ships none of its own and
-wants every word already stressed, and `v5_5_ru`'s own voices are freed again
-as soon as that model is out. Later starts still take a while: on a modest
-CPU, loading and warming up the voices before the port opens can take half a
-minute.
+On first start the add-on downloads the voice package `v5_cis_base` (~92 MB,
+SHA-256 verified, resumable) into its persistent data directory. The stress
+and homograph model is not downloaded — it ships inside the `silero-stress`
+wheel that is installed into the image at build time. Later starts still take
+a while: on a modest CPU, loading and warming up the voices before the port
+opens can take half a minute.
 
 Once the Wyoming server is listening, the add-on registers itself with Home
 Assistant and the **Wyoming Protocol** integration is offered under
@@ -93,19 +92,20 @@ The model also drops bare digits, so the add-on expands them before
 synthesis: integers and decimals become Russian words with the unit in
 agreement (`21,5°C` → «двадцать одна целая пять десятых градуса»), times are
 read as hours and minutes (`13:45` → «тринадцать сорок пять»), and `%`, `°C`,
-`°F`, `№` are spelled out. The result then goes through the stress model,
-which marks the stressed vowel of every word and resolves homographs
-(«з+амок» vs «зам+ок») — `v5_cis_base` has no stress of its own and would
-otherwise guess.
+`°F`, `№` are spelled out. The result then goes through
+[silero-stress](https://github.com/snakers4/silero-stress), which marks the
+stressed vowel of every word and resolves its 2,208 homographs («з+амок» vs
+«зам+ок») — `v5_cis_base` has no stress of its own and would otherwise
+guess.
 
 ## Model license
 
-The add-on code is MIT. So are the `v5_cis_base` voice weights
-([LICENSE_CIS](https://github.com/snakers4/silero-models/blob/master/LICENSE_CIS)).
-The `v5_5_ru` package, which the add-on downloads for its stress model, is
-distributed under **CC BY-NC-SA 4.0** — free for personal, non-commercial
-use, which is what a home Assist pipeline is. Commercial deployments need a
-license from Silero.
+Everything here is MIT: the add-on code, the `v5_cis_base` voice weights
+([LICENSE_CIS](https://github.com/snakers4/silero-models/blob/master/LICENSE_CIS)),
+and [silero-stress](https://github.com/snakers4/silero-stress), which carries
+the stress and homograph weights. Up to 1.3.0 the stress model came from the
+CC BY-NC-SA 4.0 `v5_5_ru` package, which ruled out commercial use; that
+restriction is gone.
 
 ## Troubleshooting
 

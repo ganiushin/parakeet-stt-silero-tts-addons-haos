@@ -106,8 +106,9 @@ faster than real time on two CPU threads.
 - **Text normalization** — the Silero model silently drops digits and Latin
   script, so the add-on expands numbers to Russian words (`21,5 °C` →
   «двадцать одна целая пять десятых градуса Цельсия») and transliterates
-  Latin words, then marks the stresses the voices need
-- **Memory** — ~585 MB resident; **Disk** — ~250 MB (model files)
+  Latin words, then marks the stresses the voices need with
+  [silero-stress](https://github.com/snakers4/silero-stress)
+- **Memory** — ~700–720 MB resident; **Disk** — ~92 MB (the voice package)
 
 ### Everything this add-on downloads
 
@@ -115,13 +116,11 @@ faster than real time on two CPU threads.
 |---|---|---|
 | `ubuntu:24.04` base image | `mirror.gcr.io/library/ubuntu` | image digest resolved at build |
 | `torch` 2.8.0 (CPU wheel) | [download.pytorch.org/whl/cpu](https://download.pytorch.org/whl/cpu) | version pinned in Dockerfile |
-| Python packages (`wyoming==1.7.2`, `num2words==0.5.14`, …) | PyPI | versions pinned in [`pyproject.toml`](./wyoming_silero_tts/silero/pyproject.toml) |
+| Python packages (`wyoming==1.7.2`, `num2words==0.5.14`, `silero-stress==1.5` — the last one carries the stress model's weights, ~67 MB) | PyPI | versions pinned in [`pyproject.toml`](./wyoming_silero_tts/silero/pyproject.toml) |
 | Silero model `v5_cis_base.pt` (~92 MB, the voices) | [models.silero.ai](https://models.silero.ai/models/tts/ru/v5_cis_base.pt) | **SHA-256 pinned** in [`bootstrap.py`](./wyoming_silero_tts/silero/scripts/bootstrap.py), downloaded at first start |
-| Silero model `v5_5_ru.pt` (~145 MB, opened only for its stress model) | [models.silero.ai](https://models.silero.ai/models/tts/ru/v5_5_ru.pt) | **SHA-256 pinned** in [`bootstrap.py`](./wyoming_silero_tts/silero/scripts/bootstrap.py), downloaded at first start |
 
-The add-on code is MIT, and so are the `v5_cis_base` voices; the `v5_5_ru`
-weights, downloaded for the stress model, are **CC BY-NC-SA 4.0** (free for
-personal, non-commercial use). Options and troubleshooting: see
+The add-on code is MIT, and so are both model weights it uses — the
+`v5_cis_base` voices and `silero-stress`. Options and troubleshooting: see
 [the add-on docs](./wyoming_silero_tts/DOCS.md).
 
 ## Licensing
@@ -133,14 +132,14 @@ are not ours to relicense:
   vendored from cibernox/wyoming-parakeet-on-intel-npu (MIT, © Miguel Camba);
   its own LICENSE file travels with it.
 - The model weights the add-ons download at runtime keep their upstream
-  licences: Parakeet TDT 0.6B v3 and its ONNX export under **CC-BY-4.0**,
-  Silero `v5_cis_base` under **MIT**, and Silero `v5_5_ru` — needed for the
-  Russian stress model — under **CC BY-NC-SA 4.0**, which is free for
-  personal, non-commercial use only.
+  licences: Parakeet TDT 0.6B v3 and its ONNX export under **CC-BY-4.0**, and
+  Silero `v5_cis_base` under **MIT**. The Russian stress model ships with the
+  `silero-stress` package, also **MIT**.
 
 ## Credits
 
 - [cibernox/wyoming-parakeet-on-intel-npu](https://github.com/cibernox/wyoming-parakeet-on-intel-npu) — the original project the STT add-on packages (MIT, © Miguel Camba)
 - [istupakov/onnx-asr](https://github.com/istupakov/onnx-asr) and the [ONNX export](https://huggingface.co/istupakov/parakeet-tdt-0.6b-v3-onnx) of the model (MIT / CC-BY-4.0)
 - [NVIDIA Parakeet TDT 0.6B v3](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3) — the STT model itself (CC-BY-4.0)
-- [snakers4/silero-models](https://github.com/snakers4/silero-models) — the Silero TTS models (`v5_cis_base` MIT, `v5_5_ru` CC BY-NC-SA 4.0, © Silero)
+- [snakers4/silero-models](https://github.com/snakers4/silero-models) — the Silero TTS voices (`v5_cis_base`, MIT, © Silero)
+- [snakers4/silero-stress](https://github.com/snakers4/silero-stress) — Russian stress and homograph disambiguation (MIT, © Silero)

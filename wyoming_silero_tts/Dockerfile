@@ -42,8 +42,8 @@ RUN pip install --no-cache-dir --upgrade pip \
 
 EXPOSE 10200
 
-# No HEALTHCHECK / supervisor watchdog: the first start downloads the models
-# (~237 MB) before the port opens; on a slow line that outlives probe windows.
+# No HEALTHCHECK / supervisor watchdog: the first start downloads the voices
+# (~92 MB) before the port opens; on a slow line that outlives probe windows.
 
 COPY run.sh /run.sh
 RUN chmod +x /run.sh
